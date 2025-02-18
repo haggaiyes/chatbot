@@ -13,7 +13,6 @@ from langchain_community.vectorstores import FAISS
 import tempfile
 
 st.set_page_config(page_title='chatbot for documents',
-                   page_icon =':robot_face:',
                    layout='centered',
                    initial_sidebar_state='auto')
 
@@ -78,7 +77,7 @@ def vector_embeddings(file):
     except Exception as e:
         st.error(f"An unexpected error occurred: {e}")
 
-st.title('Document QA ChatBot')
+st.title('chatbot for documents')
 
 st.sidebar.title('Documents Uploader')
 st.sidebar.write(description)
