@@ -19,8 +19,8 @@ st.set_page_config(page_title='chatbot for documents',
 
 # load the environment variables
 load_dotenv()
-groq_api_key=os.getenv('GROQ_API_KEY')
-huggingface_api_key = os.getenv('HUGGINGFACEHUB_API_TOKEN')
+groq_api_key=os.getenv('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')
+huggingface_api_key = os.getenv('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')
 
 # load the llm model, in this case, we use llama3 model
 llm = ChatGroq(groq_api_key=groq_api_key, model_name='Llama3-8b-8192')
