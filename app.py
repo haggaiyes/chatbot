@@ -39,9 +39,7 @@ Questions:{input}
 )
 
 description = '''
-A chatbot designed to answer questions directly from your uploaded documents. 
-Utilizing state-of-the-art language models and embeddings, the Document QA ChatBot processes and analyzes your PDFs to provide accurate and context-specific answers. 
-Whether you need to extract information from research papers, reports, or any other documents, Document QA ChatBot is here to help with seamless, interactive Q&A capabilities.
+this chatbot analyzes the uploaded document and is able to engage in a conversation understanding the context of the document.
 '''
 
 # function to clear the session state
