@@ -27,7 +27,7 @@ prompt = ChatPromptTemplate.from_template(
     """
     Answer the questions based on the provided text only.
     Please provide the most accurate responses based on the question.
-    If the answer cannot be found from the context, please reply to the user that the information is not found in the provided documents.
+    If the answer cannot be found from the context, please reply to the user that you are unable to answer to that question as it is not related to the document.
 
     <context>
     {context}
