@@ -12,7 +12,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 import tempfile
 
-st.set_page_config(page_title='chatbot for documents',
+st.set_page_config(page_title='autodoc',
                    layout='centered',
                    initial_sidebar_state='auto')
 
@@ -75,7 +75,7 @@ def vector_embeddings(file):
     except Exception as e:
         st.error(f"An unexpected error occurred: {e}")
 
-st.title('chatbot for documents')
+st.title('autodoc')
 
 st.sidebar.title('Documents Uploader')
 st.sidebar.write(description)
