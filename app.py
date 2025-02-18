@@ -1,6 +1,7 @@
 # import essential libraries
 import streamlit as st
 import os
+import time
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_community.document_loaders import PyPDFLoader
@@ -12,19 +13,29 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 import tempfile
 
+# Streamlit configuration
 st.set_page_config(page_title='autodoc',
                    layout='centered',
                    initial_sidebar_state='auto')
 
-# load the environment variables
+# Load environment variables
 load_dotenv()
-groq_api_key=os.getenv('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')
+groq_api_key = os.getenv('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')
 huggingface_api_key = os.getenv('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')
 
-# load the llm model, in this case, we use llama3 model
-llm = ChatGroq(groq_api_key=groq_api_key, model_name='Llama3-8b-8192')
+# Load multiple LLM models for comparison
+llm_models = {
+    'Llama3-8b-8192': ChatGroq(groq_api_key=groq_api_key, model_name='Llama3-8b-8192'),
+    'Llama2-7b': ChatGroq(groq_api_key=groq_api_key, model_name='Llama2-7b')  # Add more as needed
+}
 
-# create a prompt template
+# Embedding models for comparison
+embedding_models = {
+    'BAAI/bge-small-en-v1.5': HuggingFaceEmbeddings(model_name='BAAI/bge-small-en-v1.5', model_kwargs={'device': 'cpu'}),
+    'sentence-transformers/all-MiniLM-L6-v2': HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2', model_kwargs={'device': 'cpu'})
+}
+
+# Create a prompt template
 prompt = ChatPromptTemplate.from_template(
 """
 Answer the questions based on the provided text only.
@@ -39,21 +50,20 @@ Questions: {input}
 )
 
 description = '''
-This chatbot analyzes the uploaded document and is able to engage in a conversation understanding the context of the document.
+This chatbot analyzes the uploaded document and engages in a conversation, understanding the context of the document.
 '''
 
-# function to clear the session state
+# Function to clear the session state
 def clear_session_state():
     for key in st.session_state.keys():
         del st.session_state[key]
 
-# function to load data, split data into chunks, perform embeddings and store in vector database
-def vector_embeddings(file):
-    if 'vectors' not in st.session_state:
-        st.session_state.embeddings = HuggingFaceEmbeddings(model_name='BAAI/bge-small-en-v1.5', model_kwargs={'device':'cpu'}, encode_kwargs={'normalize_embeddings':False})
-        st.session_state.text_splitter = RecursiveCharacterTextSplitter(chunk_size=5000, chunk_overlap=200)
-        st.session_state.docs = []
-        st.session_state.final_documents = []
+# Function to load data, split data into chunks, perform embeddings, and store in vector database
+def vector_embeddings(file, embedding_model):
+    st.session_state.embeddings = embedding_model  # use selected embedding model
+    st.session_state.text_splitter = RecursiveCharacterTextSplitter(chunk_size=5000, chunk_overlap=200)
+    st.session_state.docs = []
+    st.session_state.final_documents = []
 
     try:
         # Create a temporary file
@@ -75,13 +85,16 @@ def vector_embeddings(file):
     except Exception as e:
         st.error(f"An unexpected error occurred: {e}")
 
-st.title('autodoc')
-
+# UI for uploading documents
 st.sidebar.title('Documents Uploader')
 st.sidebar.write(description)
 file = st.sidebar.file_uploader('Upload your document', accept_multiple_files=False, type=['pdf'])
+
+# If a file is uploaded, perform vector embeddings for all embedding models
 if file:
-    vector_embeddings(file)
+    for embedding_name, embedding_model in embedding_models.items():
+        st.sidebar.write(f"Running embedding: {embedding_name}")
+        vector_embeddings(file, embedding_model)
 
 # Streamlit UI --- clear session state (vector DB)
 if st.sidebar.button('Refresh'):
@@ -107,19 +120,32 @@ if prompt1:
     with st.chat_message("User"):
         st.markdown(prompt1)
 
-    # initiate the QA retrieval and provide answer to user
-    try:
-        document_chain = create_stuff_documents_chain(llm, prompt)
-        retriever = st.session_state.vectors.as_retriever()
-        retrieval_chain = create_retrieval_chain(retriever, document_chain)
-        response = retrieval_chain.invoke({'input': prompt1})
-        bot_response = response["answer"]
-    except:
-        bot_response = 'I will only answer questions based on the document uploaded...'
-    
-    # Add bot's response to session state
-    st.session_state.messages.append({"role": "Assistant", "content": bot_response})
+    # Iterate over LLM models and compare performance
+    for model_name, llm in llm_models.items():
+        try:
+            st.sidebar.write(f"Evaluating model: {model_name}")
 
-    # Display bot's response
-    with st.chat_message("Assistant"):
-        st.markdown(bot_response)
+            # Create a document chain and retriever
+            document_chain = create_stuff_documents_chain(llm, prompt)
+            retriever = st.session_state.vectors.as_retriever()
+            retrieval_chain = create_retrieval_chain(retriever, document_chain)
+            
+            # Measure the time taken for the response
+            start_time = time.time()
+            response = retrieval_chain.invoke({'input': prompt1})
+            end_time = time.time()
+
+            # Calculate time elapsed
+            time_taken = end_time - start_time
+            bot_response = response["answer"]
+            
+            # Add bot's response to session state and display
+            st.session_state.messages.append({"role": f"Assistant ({model_name})", "content": bot_response})
+            with st.chat_message(f"Assistant ({model_name})"):
+                st.markdown(f"{bot_response}\n\n_Time taken: {time_taken:.2f} seconds_")
+
+        except Exception as e:
+            st.session_state.messages.append({"role": f"Assistant ({model_name})", "content": f"Error: {e}"})
+            with st.chat_message(f"Assistant ({model_name})"):
+                st.markdown(f"Error: {e}")
+
