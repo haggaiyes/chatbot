@@ -64,10 +64,6 @@ if 'vectors' not in st.session_state:
 # Streamlit App Title
 st.title('Customer Support Chatbot')
 
-# Sidebar - Refresh button to clear chat history
-if st.sidebar.button('Refresh Chat'):
-    clear_session_state()
-
 # Initialize chat history in session state
 if 'messages' not in st.session_state:
     st.session_state.messages = []
