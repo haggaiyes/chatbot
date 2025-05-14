@@ -25,9 +25,10 @@ llm = ChatGroq(groq_api_key=groq_api_key, model_name='Llama3-8b-8192')
 # Prompt Template for Customer Support
 prompt = ChatPromptTemplate.from_template(
 """
-Answer the questions based on the provided support document only.
+You are a customer service chatbot.
+Answer the questions based on the provided support document.
 Please provide clear and helpful customer support responses.
-If the information is not found in the document, kindly inform the user.
+If the information asked for is not found in the document, kindly inform the user.
 
 <context>
 {context}
