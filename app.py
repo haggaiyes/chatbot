@@ -67,7 +67,7 @@ st.title('Customer Support Chatbot')
 
 # Initialize chat history in session state
 if 'messages' not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = [{"role": "Assistant", "content": "Hello! How can I assist you today?"}]
 
 # Display previous chat messages
 for message in st.session_state.messages:
