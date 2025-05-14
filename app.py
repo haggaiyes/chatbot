@@ -1,88 +1,71 @@
-# import essential libraries
+# Import essential libraries
 import streamlit as st
 import os
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import TextLoader  # <-- Corrected loader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-import tempfile
 
-st.set_page_config(page_title='autodoc', layout='centered', initial_sidebar_state='auto')
+# Streamlit Page Config
+st.set_page_config(page_title='Customer Support Chatbot', layout='centered', initial_sidebar_state='auto')
 
-# load the environment variables
+# Load environment variables from .env
 load_dotenv()
-groq_api_key = os.getenv('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')
-huggingface_api_key = os.getenv('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')
+groq_api_key = os.getenv('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') 
+huggingface_api_key = os.getenv('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')  
 
-# load the llm model, in this case, we use llama3 model
+# Load the LLM model (LLaMa3)
 llm = ChatGroq(groq_api_key=groq_api_key, model_name='Llama3-8b-8192')
 
-# create a prompt template
+# Prompt Template for Customer Support
 prompt = ChatPromptTemplate.from_template(
-    """
-    Answer the questions based on the provided text only.
-    Please provide the most accurate responses based on the question.
-    If the answer cannot be found from the context, please reply to the user that you are unable to answer to that question as it is not related to the document.
+"""
+Answer the questions based on the provided support document only.
+Please provide clear and helpful customer support responses.
+If the information is not found in the document, kindly inform the user.
 
-    <context>
-    {context}
-    <context>
-    Questions: {input}
-    """
+<context>
+{context}
+<context>
+Question: {input}
+"""
 )
 
-description = '''
-This chatbot analyzes the uploaded document and is able to engage in a conversation understanding the context of the document.
-'''
-
-# function to clear the session state
+# Clear session state function
 def clear_session_state():
-    for key in st.session_state.keys():
+    for key in list(st.session_state.keys()):
         del st.session_state[key]
 
-# function to load data, split data into chunks, perform embeddings and store in vector database
-def vector_embeddings(file):
-    if 'vectors' not in st.session_state:
-        st.session_state.embeddings = HuggingFaceEmbeddings(model_name='BAAI/bge-small-en-v1.5', model_kwargs={'device': 'cpu'}, encode_kwargs={'normalize_embeddings': False})
-        st.session_state.text_splitter = RecursiveCharacterTextSplitter(chunk_size=5000, chunk_overlap=200)
-        st.session_state.docs = []
-        st.session_state.final_documents = []
+# Load Customer Support Data and Create Vector Store
+@st.cache_resource
+def load_customer_support_data():
+    loader = TextLoader('data/customer_support_faq.txt')  # Static document path
+    docs = loader.load()
 
-    try:
-        # Create a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-            temp_file.write(file.read())
-            temp_file_path = temp_file.name
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=5000, chunk_overlap=200)
+    final_documents = text_splitter.split_documents(docs)
 
-        loader = PyPDFLoader(temp_file_path)
-        docs = loader.load()
-        final_documents = st.session_state.text_splitter.split_documents(docs)
+    embeddings = HuggingFaceEmbeddings(model_name='BAAI/bge-small-en-v1.5',
+                                       model_kwargs={'device': 'cpu'},
+                                       encode_kwargs={'normalize_embeddings': False})
+    vectors = FAISS.from_documents(final_documents, embeddings)
 
-        # Append the new documents to the existing ones
-        st.session_state.docs.extend(docs)
-        st.session_state.final_documents.extend(final_documents)
+    return vectors
 
-        # Update the vector store with the new documents
-        st.session_state.vectors = FAISS.from_documents(st.session_state.final_documents, st.session_state.embeddings)
-    
-    except Exception as e:
-        st.error(f"An unexpected error occurred: {e}")
+# Load vectors and store in session state
+if 'vectors' not in st.session_state:
+    st.session_state.vectors = load_customer_support_data()
 
-st.title('Autodoc')
+# Streamlit App Title
+st.title('Customer Support Chatbot')
 
-st.sidebar.title('Documents Uploader')
-st.sidebar.write(description)
-file = st.sidebar.file_uploader('Upload your document', accept_multiple_files=False, type=['pdf'])
-if file:
-    vector_embeddings(file)
-
-# Streamlit UI --- clear session state (vector DB)
-if st.sidebar.button('Refresh'):
+# Sidebar - Refresh button to clear chat history
+if st.sidebar.button('Refresh Chat'):
     clear_session_state()
 
 # Initialize chat history in session state
@@ -94,27 +77,27 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Streamlit UI --- for user to input their queries
-prompt1 = st.chat_input('Please enter your question:')
+# Streamlit Chat Input
+user_query = st.chat_input('Please enter your question:')
 
-if prompt1:
+if user_query:
     # Add user's message to session state
-    st.session_state.messages.append({"role": "User", "content": prompt1})
+    st.session_state.messages.append({"role": "User", "content": user_query})
 
     # Display user's message
     with st.chat_message("User"):
-        st.markdown(prompt1)
+        st.markdown(user_query)
 
-    # initiate the QA retrieval and provide answer to user
+    # Run Retrieval Chain for answering
     try:
         document_chain = create_stuff_documents_chain(llm, prompt)
         retriever = st.session_state.vectors.as_retriever()
         retrieval_chain = create_retrieval_chain(retriever, document_chain)
-        response = retrieval_chain.invoke({'input': prompt1})
+        response = retrieval_chain.invoke({'input': user_query})
         bot_response = response["answer"]
-    except:
-        bot_response = 'I will only answer questions based on the document uploaded...'
-    
+    except Exception as e:
+        bot_response = f"Sorry, I encountered an error: {e}"
+
     # Add bot's response to session state
     st.session_state.messages.append({"role": "Assistant", "content": bot_response})
 
