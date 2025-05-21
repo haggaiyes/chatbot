@@ -16,8 +16,6 @@ st.set_page_config(page_title='Customer Support Chatbot', layout='centered', ini
 
 # Load environment variables from .env
 load_dotenv()
-GROQ_API_KEY=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
-HUGGINGFACE_API_KEY=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
 groq_api_key = os.getenv('GROQ_API_KEY')
 huggingface_api_key = os.getenv('HUGGINGFACE_API_KEY')
 
