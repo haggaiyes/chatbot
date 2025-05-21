@@ -21,7 +21,7 @@ huggingface_api_key = os.getenv('HUGGINGFACE_API_KEY')
 
 
 # Load the LLM model (LLaMa3)
-llm = ChatGroq(groq_api_key=groq_api_key, model_name='Llama3-8b-8192')
+llm = ChatGroq(groq_api_key=groq_api_key, model_name='llama-3.1-8b-instant')
 
 # Prompt Template for Customer Support
 prompt = ChatPromptTemplate.from_template(
