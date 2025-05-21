@@ -1,7 +1,6 @@
 # Import essential libraries
 import streamlit as st
 import os
-os.environ["STREAMLIT_DISABLE_WATCHDOG_WARNINGS"] = "true"
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_community.document_loaders import TextLoader  # <-- Corrected loader
